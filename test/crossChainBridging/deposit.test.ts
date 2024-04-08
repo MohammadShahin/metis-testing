@@ -79,7 +79,7 @@ describe("Bridging via deposit E2E test", function () {
       const {
         contracts: {
           l1StandardBridge,
-          addresses: { l1MetisAddress, l2MetisAddress },
+          addresses: { L1Metis, L2Metis },
         },
         depositAmount,
         networksConfig: { l2ChainId },
@@ -87,8 +87,8 @@ describe("Bridging via deposit E2E test", function () {
       const l2Gas = 5000000;
       depositMetisTxResponse = await l1StandardBridge.depositERC20ByChainId(
         l2ChainId,
-        l1MetisAddress,
-        l2MetisAddress, // this doesn't matter because we are bridging metis
+        L1Metis,
+        L2Metis, // this doesn't matter because we are bridging metis
         depositAmount,
         l2Gas,
         "0x",
@@ -212,7 +212,7 @@ describe("Bridging via deposit E2E test", function () {
       const {
         contracts: {
           l1StandardBridge,
-          addresses: { l1Erc20Token, l2Erc20Token },
+          addresses: { L1Erc20Token, L2Erc20Token },
         },
         depositAmount,
         networksConfig: { l2ChainId },
@@ -220,8 +220,8 @@ describe("Bridging via deposit E2E test", function () {
       const l2Gas = 5000000;
       depositTokensTxResponse = await l1StandardBridge.depositERC20ByChainId(
         l2ChainId,
-        l1Erc20Token,
-        l2Erc20Token,
+        L1Erc20Token,
+        L2Erc20Token,
         depositAmount,
         l2Gas,
         "0x",

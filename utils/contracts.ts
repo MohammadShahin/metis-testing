@@ -1,6 +1,7 @@
 import {
   ERC20__factory,
   L1StandardBridge__factory,
+  L2StandardBridge__factory,
   Lib_AddressManager__factory,
   MyToken__factory,
   StateCommitmentChain__factory,
@@ -9,54 +10,93 @@ import { getNetworkContractAddresses } from "./addresses";
 import { ChainName } from "./types";
 import { BaseWallet } from "ethers";
 
+const contractFactories = {
+  L1: [
+    {
+      addressName: "L1Metis",
+      factory: ERC20__factory,
+      contractName: "l1Metis",
+    },
+    {
+      addressName: "L1Erc20Token",
+      factory: MyToken__factory,
+      contractName: "l1Token",
+    },
+    {
+      addressName: "L1StandardBridge",
+      factory: L1StandardBridge__factory,
+      contractName: "l1StandardBridge",
+    },
+    {
+      addressName: "StateCommitmentChain",
+      factory: StateCommitmentChain__factory,
+      contractName: "stateCommitmentChain",
+    },
+    {
+      addressName: "AddressManager",
+      factory: Lib_AddressManager__factory,
+      contractName: "addressManager",
+    },
+  ],
+  L2: [
+    {
+      addressName: "L2Metis",
+      factory: ERC20__factory,
+      contractName: "l2Metis",
+    },
+    {
+      addressName: "OVM_ETH",
+      factory: ERC20__factory,
+      contractName: "l2WrappedEth",
+    },
+    {
+      addressName: "L2Erc20Token",
+      factory: MyToken__factory,
+      contractName: "l2Token",
+    },
+    {
+      addressName: "L2StandardBridge",
+      factory: L2StandardBridge__factory,
+      contractName: "l2StandardBridge",
+    },
+  ],
+} as const;
+
+type ContractDefinition =
+  | (typeof contractFactories.L1)[number]
+  | (typeof contractFactories.L2)[number];
+
+type Contracts = {
+  [K in ContractDefinition["contractName"]]: ReturnType<
+    Extract<ContractDefinition, { contractName: K }>["factory"]["connect"]
+  >;
+};
+
 const getNetworkContracts = (
   chainName: ChainName,
   l1Singer?: BaseWallet,
   l2Singer?: BaseWallet
 ) => {
   const networkAddresses = getNetworkContractAddresses(chainName);
-  const l1Metis = ERC20__factory.connect(
-    networkAddresses.l1MetisAddress,
-    l1Singer
-  );
-  const l2Metis = ERC20__factory.connect(
-    networkAddresses.l2MetisAddress,
-    l2Singer
-  );
-  const l2WrappedEth = ERC20__factory.connect(
-    networkAddresses.OVM_ETH,
-    l2Singer
-  );
-  const l1Token = MyToken__factory.connect(
-    networkAddresses.l1Erc20Token,
-    l1Singer
-  );
-  const l2Token = MyToken__factory.connect(
-    networkAddresses.l2Erc20Token,
-    l2Singer
-  );
-  const l1StandardBridge = L1StandardBridge__factory.connect(
-    networkAddresses.L1StandardBridge,
-    l1Singer
-  );
-  const stateCommitmentChain = StateCommitmentChain__factory.connect(
-    networkAddresses.StateCommitmentChain,
-    l1Singer
-  );
-  const addressManager = Lib_AddressManager__factory.connect(
-    networkAddresses.AddressManager,
-    l1Singer
-  );
+  const contracts = {} as Contracts;
+  for (const { addressName, contractName, factory } of contractFactories.L1) {
+    // @ts-ignore
+    contracts[contractName] = factory.connect(
+      networkAddresses[addressName as keyof typeof networkAddresses],
+      l1Singer
+    );
+  }
+
+  for (const { addressName, contractName, factory } of contractFactories.L2) {
+    // @ts-ignore
+    contracts[contractName] = factory.connect(
+      networkAddresses[addressName as keyof typeof networkAddresses],
+      l2Singer
+    );
+  }
 
   return {
-    l1Metis,
-    l2Metis,
-    l2WrappedEth,
-    l1Token,
-    l2Token,
-    l1StandardBridge,
-    stateCommitmentChain,
-    addressManager,
+    ...contracts,
     addresses: networkAddresses,
   };
 };

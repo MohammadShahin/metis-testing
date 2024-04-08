@@ -60,12 +60,12 @@ const networkContracts = {
     L1StandardBridge: "0x9848dE505e6Aa301cEecfCf23A0a150140fc996e",
 
     // metis
-    l1MetisAddress: "0x7f49160EB9BB068101d445fe77E17ecDb37D0B47",
-    l2MetisAddress: "0xDeadDeAddeAddEAddeadDEaDDEAdDeaDDeAD0000",
+    L1Metis: "0x7f49160EB9BB068101d445fe77E17ecDb37D0B47",
+    L2Metis: "0xDeadDeAddeAddEAddeadDEaDDEAdDeaDDeAD0000",
 
     // erc20 token
-    l1Erc20Token: "0x000C1724778158D9f67292F54E2e791F53a51737",
-    l2Erc20Token: "0x7c6b91d9be155a6db01f749217d76ff02a7227f2",
+    L1Erc20Token: "0x000C1724778158D9f67292F54E2e791F53a51737",
+    L2Erc20Token: "0x7c6b91d9be155a6db01f749217d76ff02a7227f2",
 
     ...predeploys,
   },
@@ -78,11 +78,11 @@ const networkContracts = {
     AddressManager: "",
     L1StandardBridge: "",
 
-    l1MetisAddress: "",
-    l2MetisAddress: "",
+    L1Metis: "",
+    L2Metis: "",
 
-    l1Erc20Token: "",
-    l2Erc20Token: "",
+    L1Erc20Token: "",
+    L2Erc20Token: "",
     
     ...predeploys,
   },
