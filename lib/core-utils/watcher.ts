@@ -1,87 +1,85 @@
 /* External Imports */
-import { ethers, Provider, Filter, Log, TransactionReceipt } from 'ethers'
+import { ethers, Provider, Filter, Log, TransactionReceipt } from "ethers";
 
-const SENT_MESSAGE = ethers.id('SentMessage(bytes)')
-const RELAYED_MESSAGE = ethers.id(`RelayedMessage(bytes32)`)
-const FAILED_RELAYED_MESSAGE = ethers.id(`FailedRelayedMessage(bytes32)`)
+const SENT_MESSAGE = ethers.id("SentMessage(bytes)");
+const RELAYED_MESSAGE = ethers.id(`RelayedMessage(bytes32)`);
+const FAILED_RELAYED_MESSAGE = ethers.id(`FailedRelayedMessage(bytes32)`);
 
 export interface Layer {
-  provider: Provider
-  messengerAddress: string
-  blocksToFetch?: number
+  provider: Provider;
+  messengerAddress: string;
+  blocksToFetch?: number;
 }
 
 export interface WatcherOptions {
-  l1: Layer
-  l2: Layer
-  pollInterval?: number
-  blocksToFetch?: number
-  pollForPending?: boolean
+  l1: Layer;
+  l2: Layer;
+  pollInterval?: number;
+  blocksToFetch?: number;
+  pollForPending?: boolean;
 }
 
-
-
 export class Watcher {
-  public l1: Layer
-  public l2: Layer
-  public pollInterval = 3000
-  public blocksToFetch = 1500
-  public pollForPending = true
+  public l1: Layer;
+  public l2: Layer;
+  public pollInterval = 3000;
+  public blocksToFetch = 1500;
+  public pollForPending = true;
 
   constructor(opts: WatcherOptions) {
-    this.l1 = opts.l1
-    this.l2 = opts.l2
-    if (typeof opts.pollInterval === 'number') {
-      this.pollInterval = opts.pollInterval
+    this.l1 = opts.l1;
+    this.l2 = opts.l2;
+    if (typeof opts.pollInterval === "number") {
+      this.pollInterval = opts.pollInterval;
     }
-    if (typeof opts.blocksToFetch === 'number') {
-      this.blocksToFetch = opts.blocksToFetch
+    if (typeof opts.blocksToFetch === "number") {
+      this.blocksToFetch = opts.blocksToFetch;
     }
-    if (typeof opts.pollForPending === 'boolean') {
-      this.pollForPending = opts.pollForPending
+    if (typeof opts.pollForPending === "boolean") {
+      this.pollForPending = opts.pollForPending;
     }
   }
 
   public async getMessageHashesFromL1Tx(l1TxHash: string): Promise<string[]> {
-    return this.getMessageHashesFromTx(this.l1, l1TxHash)
+    return this.getMessageHashesFromTx(this.l1, l1TxHash);
   }
   public async getMessageHashesFromL2Tx(l2TxHash: string): Promise<string[]> {
-    return this.getMessageHashesFromTx(this.l2, l2TxHash)
+    return this.getMessageHashesFromTx(this.l2, l2TxHash);
   }
 
   public async getL1TransactionReceipt(
     l2ToL1MsgHash: string,
-    pollForPending?: any,
+    pollForPending?: any
   ): Promise<TransactionReceipt | undefined> {
-    return this.getTransactionReceipt(this.l1, l2ToL1MsgHash, pollForPending)
+    return this.getTransactionReceipt(this.l1, l2ToL1MsgHash, pollForPending);
   }
 
   public async getL2TransactionReceipt(
     l1ToL2MsgHash: string,
-    pollForPending?: any,
+    pollForPending?: any
   ): Promise<TransactionReceipt | undefined> {
-    return this.getTransactionReceipt(this.l2, l1ToL2MsgHash, pollForPending)
+    return this.getTransactionReceipt(this.l2, l1ToL2MsgHash, pollForPending);
   }
 
   public async getMessageHashesFromTx(
     layer: Layer,
     txHash: string
   ): Promise<string[]> {
-    const receipt = await layer.provider.getTransactionReceipt(txHash)
+    const receipt = await layer.provider.getTransactionReceipt(txHash);
     if (!receipt) {
-      return []
+      return [];
     }
 
-    const msgHashes = []
+    const msgHashes = [];
     const sentMessageEventId = ethers.id(
-      'SentMessage(address,address,bytes,uint256,uint256,uint256)'
-    )
+      "SentMessage(address,address,bytes,uint256,uint256,uint256)"
+    );
     const l2CrossDomainMessengerRelayAbi = [
-      'function relayMessage(address _target,address _sender,bytes memory _message,uint256 _messageNonce)',
-    ]
+      "function relayMessage(address _target,address _sender,bytes memory _message,uint256 _messageNonce)",
+    ];
     const l2CrossDomainMessengerRelayinterface = new ethers.Interface(
       l2CrossDomainMessengerRelayAbi
-    )
+    );
     for (const log of receipt.logs) {
       if (
         log.address === layer.messengerAddress &&
@@ -89,27 +87,27 @@ export class Watcher {
       ) {
         const [sender, message, messageNonce] =
           ethers.AbiCoder.defaultAbiCoder().decode(
-            ['address', 'bytes', 'uint256'],
+            ["address", "bytes", "uint256"],
             log.data
-          )
+          );
 
         const [target] = ethers.AbiCoder.defaultAbiCoder().decode(
-          ['address'],
+          ["address"],
           log.topics[1]
-        )
+        );
 
         const encodedMessage =
           l2CrossDomainMessengerRelayinterface.encodeFunctionData(
-            'relayMessage',
+            "relayMessage",
             [target, sender, message, messageNonce]
-          )
+          );
 
         msgHashes.push(
-          ethers.solidityPackedKeccak256(['bytes'], [encodedMessage])
-        )
+          ethers.solidityPackedKeccak256(["bytes"], [encodedMessage])
+        );
       }
     }
-    return msgHashes
+    return msgHashes;
   }
 
   public async getTransactionReceipt(
@@ -117,61 +115,61 @@ export class Watcher {
     msgHash: string,
     pollForPending?: any
   ): Promise<TransactionReceipt | undefined> {
-    if (typeof pollForPending !== 'boolean') {
-      pollForPending = this.pollForPending
+    if (typeof pollForPending !== "boolean") {
+      pollForPending = this.pollForPending;
     }
 
-    let matches: Log[] = []
+    let matches: Log[] = [];
 
-    let blocksToFetch = layer.blocksToFetch
-    if (typeof blocksToFetch !== 'number') {
-      blocksToFetch = this.blocksToFetch
+    let blocksToFetch = layer.blocksToFetch;
+    if (typeof blocksToFetch !== "number") {
+      blocksToFetch = this.blocksToFetch;
     }
 
     // scan for transaction with specified message
     while (matches.length === 0) {
-      const blockNumber = await layer.provider.getBlockNumber()
-      const startingBlock = Math.max(blockNumber - blocksToFetch, 0)
+      const blockNumber = await layer.provider.getBlockNumber();
+      const startingBlock = Math.max(blockNumber - blocksToFetch, 0);
       const successFilter: Filter = {
         address: layer.messengerAddress,
         topics: [RELAYED_MESSAGE],
         fromBlock: startingBlock,
-      }
+      };
       const failureFilter: Filter = {
         address: layer.messengerAddress,
         topics: [FAILED_RELAYED_MESSAGE],
         fromBlock: startingBlock,
-      }
-      const successLogs = await layer.provider.getLogs(successFilter)
-      const failureLogs = await layer.provider.getLogs(failureFilter)
-      const logs = successLogs.concat(failureLogs)
-      matches = logs.filter(
-        (log: Log) => log.topics[1] === msgHash
-      )
+      };
+      const successLogs = await layer.provider.getLogs(successFilter);
+      const failureLogs = await layer.provider.getLogs(failureFilter);
+      const logs = successLogs.concat(failureLogs);
+      matches = logs.filter((log: Log) => log.topics[1] === msgHash);
 
       // exit loop after first iteration if not polling
       if (!pollForPending) {
-        break
+        break;
       }
 
       // pause awhile before trying again
-      await new Promise((r) => setTimeout(r, this.pollInterval))
+      await new Promise((r) => setTimeout(r, this.pollInterval));
     }
 
     // Message was relayed in the past
     if (matches.length > 0) {
       if (matches.length > 1) {
         throw Error(
-          'Found multiple transactions relaying the same message hash.'
-        )
+          "Found multiple transactions relaying the same message hash."
+        );
       }
-      const ret = await layer.provider.getTransactionReceipt(matches[0].transactionHash)
+      const ret = await layer.provider.getTransactionReceipt(
+        matches[0].transactionHash
+      );
       if (ret == null) {
-        return undefined
+        return undefined;
       }
       return ret;
     } else {
-      return Promise.resolve(undefined)
+      return Promise.resolve(undefined);
     }
   }
 }

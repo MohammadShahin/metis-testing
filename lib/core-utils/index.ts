@@ -1,1 +1,1 @@
-export { Watcher } from "./watcher"
+export { Watcher } from "./watcher";

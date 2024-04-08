@@ -1,61 +1,65 @@
 /* Imports: External */
-import { ethers } from 'ethers'
+import { ethers } from "ethers";
 import {
   fromHexString,
   remove0x,
   toHexString,
   toRpcHexString,
-} from '@/utils/hex-strings'
-import * as rlp from 'rlp'
-import { MerkleTree } from 'merkletreejs'
-import { JsonRpcProvider } from 'ethers'
-import { L2CrossDomainMessenger, L2CrossDomainMessenger__factory, StateCommitmentChain__factory } from '@/typechain-types'
+} from "@/utils/hex-strings";
+import * as rlp from "rlp";
+import { MerkleTree } from "merkletreejs";
+import { JsonRpcProvider } from "ethers";
+import {
+  L2CrossDomainMessenger,
+  L2CrossDomainMessenger__factory,
+  StateCommitmentChain__factory,
+} from "@/typechain-types";
 
 // Number of blocks added to the L2 chain before the first L2 transaction. Genesis are added to the
 // chain to initialize the system. However, they create a discrepancy between the L2 block number
 // the index of the transaction that corresponds to that block number. For example, if there's 1
 // genesis block, then the transaction with an index of 0 corresponds to the block with index 1.
-const NUM_L2_GENESIS_BLOCKS = 1
+const NUM_L2_GENESIS_BLOCKS = 1;
 
 interface StateRootBatchHeader {
-  batchIndex: bigint
-  batchRoot: string
-  batchSize: bigint
-  prevTotalElements: bigint
-  extraData: string
+  batchIndex: bigint;
+  batchRoot: string;
+  batchSize: bigint;
+  prevTotalElements: bigint;
+  extraData: string;
 }
 
 interface StateRootBatch {
-  header: StateRootBatchHeader
-  stateRoots: string[]
+  header: StateRootBatchHeader;
+  stateRoots: string[];
 }
 
 interface CrossDomainMessage {
-  target: string
-  sender: string
-  message: string
-  messageNonce: number
+  target: string;
+  sender: string;
+  message: string;
+  messageNonce: number;
 }
 
 interface CrossDomainMessageProof {
-  stateRoot: string
-  stateRootBatchHeader: StateRootBatchHeader
+  stateRoot: string;
+  stateRootBatchHeader: StateRootBatchHeader;
   stateRootProof: {
-    index: number
-    siblings: string[]
-  }
-  stateTrieWitness: string
-  storageTrieWitness: string
+    index: number;
+    siblings: string[];
+  };
+  stateTrieWitness: string;
+  storageTrieWitness: string;
 }
 
 interface CrossDomainMessagePair {
-  message: CrossDomainMessage
-  proof: CrossDomainMessageProof
+  message: CrossDomainMessage;
+  proof: CrossDomainMessageProof;
 }
 
 interface StateTrieProof {
-  accountProof: string
-  storageProof: string
+  accountProof: string;
+  storageProof: string;
 }
 
 /**
@@ -72,16 +76,16 @@ export const getMessagesByTransactionHash = async (
   l2TransactionHash: string
 ): Promise<CrossDomainMessage[]> => {
   // Complain if we can't find the given transaction.
-  const transaction = await l2RpcProvider.getTransaction(l2TransactionHash)
+  const transaction = await l2RpcProvider.getTransaction(l2TransactionHash);
   if (transaction === null) {
-    throw new Error(`unable to find tx with hash: ${l2TransactionHash}`)
+    throw new Error(`unable to find tx with hash: ${l2TransactionHash}`);
   }
 
   const l2CrossDomainMessenger = new ethers.Contract(
     l2CrossDomainMessengerAddress,
     L2CrossDomainMessenger__factory.abi,
     l2RpcProvider
-  )
+  );
 
   // Find all SentMessage events created in the same block as the given transaction. This is
   // reliable because we should only have one transaction per block.
@@ -89,25 +93,25 @@ export const getMessagesByTransactionHash = async (
     l2CrossDomainMessenger.filters.SentMessage(),
     transaction.blockNumber!,
     transaction.blockNumber!
-  )
+  );
 
   // Decode the messages and turn them into a nicer struct.
   const sentMessages = sentMessageEvents.map((sentMessageEvent) => {
     // make sure args exist in sentMessageEvent
-    if ('args' in sentMessageEvent === false) {
-      throw new Error('sentMessageEvent.args does not exist')
+    if ("args" in sentMessageEvent === false) {
+      throw new Error("sentMessageEvent.args does not exist");
     }
-    
+
     return {
       target: sentMessageEvent.args.target,
       sender: sentMessageEvent.args.sender,
       message: sentMessageEvent.args.message, // decoded message
       messageNonce: sentMessageEvent.args.messageNonce.toNumber(),
-    }
-  })
+    };
+  });
 
-  return sentMessages
-}
+  return sentMessages;
+};
 
 /**
  * Encodes a cross domain message.
@@ -117,10 +121,10 @@ export const getMessagesByTransactionHash = async (
  */
 const encodeCrossDomainMessage = (message: CrossDomainMessage): string => {
   return L2CrossDomainMessenger__factory.createInterface().encodeFunctionData(
-    'relayMessage',
+    "relayMessage",
     [message.target, message.sender, message.message, message.messageNonce]
-  )
-}
+  );
+};
 
 /**
  * Finds the StateBatchAppended event associated with a given L2 transaction.
@@ -140,76 +144,76 @@ export const getStateBatchAppendedEventByTransactionIndex = async (
     l1StateCommitmentChainAddress,
     StateCommitmentChain__factory.abi,
     l1RpcProvider
-  )
+  );
 
   const getStateBatchAppendedEventByBatchIndex = async (
-    index: number,
+    index: number
   ): Promise<ethers.EventLog | null> => {
     const eventQueryResult = await l1StateCommitmentChain.queryFilter(
       l1StateCommitmentChain.filters.StateBatchAppended(index)
-    )
+    );
     if (eventQueryResult.length === 0) {
-      return null
+      return null;
     } else {
-      if ('args' in eventQueryResult[0] === false) {
-        throw new Error('eventQueryResult[0].args does not exist')
+      if ("args" in eventQueryResult[0] === false) {
+        throw new Error("eventQueryResult[0].args does not exist");
       }
-      return eventQueryResult[0]
+      return eventQueryResult[0];
     }
-  }
+  };
 
   const isEventHi = (event: ethers.EventLog, index: number) => {
-    const prevTotalElements = event.args._prevTotalElements.toNumber()
-    return index < prevTotalElements
-  }
+    const prevTotalElements = event.args._prevTotalElements.toNumber();
+    return index < prevTotalElements;
+  };
 
   const isEventLo = (event: ethers.EventLog, index: number) => {
-    const prevTotalElements = event.args._prevTotalElements
-    const batchSize = event.args._batchSize
-    return index >= prevTotalElements + batchSize
-  }
+    const prevTotalElements = event.args._prevTotalElements;
+    const batchSize = event.args._batchSize;
+    return index >= prevTotalElements + batchSize;
+  };
 
   const totalBatches: bigint =
-    await l1StateCommitmentChain.getTotalBatchesByChainId(chainId)
+    await l1StateCommitmentChain.getTotalBatchesByChainId(chainId);
   if (totalBatches == 0n) {
-    return null
+    return null;
   }
 
-  let lowerBound = 0
-  let upperBound = Number(totalBatches) - 1
+  let lowerBound = 0;
+  let upperBound = Number(totalBatches) - 1;
   let batchEvent: ethers.EventLog | null =
-    await getStateBatchAppendedEventByBatchIndex(upperBound)
+    await getStateBatchAppendedEventByBatchIndex(upperBound);
   if (!batchEvent) {
-    return null
+    return null;
   }
 
   if (isEventLo(batchEvent, l2TransactionIndex)) {
     // Upper bound is too low, means this transaction doesn't have a corresponding state batch yet.
-    return null
+    return null;
   } else if (!isEventHi(batchEvent, l2TransactionIndex)) {
     // Upper bound is not too low and also not too high. This means the upper bound event is the
     // one we're looking for! Return it.
-    return batchEvent
+    return batchEvent;
   }
 
   // Binary search to find the right event. The above checks will guarantee that the event does
   // exist and that we'll find it during this search.
   while (lowerBound < upperBound) {
-    const middleOfBounds = Math.floor((lowerBound + upperBound) / 2)
-    batchEvent = await getStateBatchAppendedEventByBatchIndex(middleOfBounds)
+    const middleOfBounds = Math.floor((lowerBound + upperBound) / 2);
+    batchEvent = await getStateBatchAppendedEventByBatchIndex(middleOfBounds);
     if (!batchEvent) {
       lowerBound = middleOfBounds;
     } else if (isEventHi(batchEvent, l2TransactionIndex)) {
-      upperBound = middleOfBounds
+      upperBound = middleOfBounds;
     } else if (isEventLo(batchEvent, l2TransactionIndex)) {
-      lowerBound = middleOfBounds
+      lowerBound = middleOfBounds;
     } else {
-      break
+      break;
     }
   }
 
-  return batchEvent
-}
+  return batchEvent;
+};
 
 /**
  * Finds the full state root batch associated with a given transaction index.
@@ -224,30 +228,30 @@ export const getStateRootBatchByTransactionIndex = async (
   l1RpcProvider: JsonRpcProvider,
   l1StateCommitmentChainAddress: string,
   l2TransactionIndex: number,
-  chainId: number,
+  chainId: number
 ): Promise<StateRootBatch | null> => {
   const l1StateCommitmentChain = new ethers.Contract(
     l1StateCommitmentChainAddress,
     StateCommitmentChain__factory.abi,
     l1RpcProvider
-  )
+  );
 
   const stateBatchAppendedEvent =
     await getStateBatchAppendedEventByTransactionIndex(
       l1RpcProvider,
       l1StateCommitmentChainAddress,
       l2TransactionIndex,
-      chainId,
-    )
+      chainId
+    );
   if (stateBatchAppendedEvent === null) {
-    return null
+    return null;
   }
 
-  const stateBatchTransaction = await stateBatchAppendedEvent.getTransaction()
+  const stateBatchTransaction = await stateBatchAppendedEvent.getTransaction();
   const [stateRoots] = l1StateCommitmentChain.interface.decodeFunctionData(
-    'appendStateBatch',
+    "appendStateBatch",
     stateBatchTransaction.data
-  )
+  );
 
   return {
     header: {
@@ -258,8 +262,8 @@ export const getStateRootBatchByTransactionIndex = async (
       extraData: stateBatchAppendedEvent.args._extraData,
     },
     stateRoots,
-  }
-}
+  };
+};
 
 /**
  * Generates a Merkle proof (using the particular scheme we use within Lib_MerkleTree).
@@ -275,28 +279,28 @@ export const getMerkleTreeProof = (
   // Our specific Merkle tree implementation requires that the number of leaves is a power of 2.
   // If the number of given leaves is less than a power of 2, we need to round up to the next
   // available power of 2. We fill the remaining space with the hash of bytes32(0).
-  const correctedTreeSize = Math.pow(2, Math.ceil(Math.log2(leaves.length)))
-  const parsedLeaves = []
+  const correctedTreeSize = Math.pow(2, Math.ceil(Math.log2(leaves.length)));
+  const parsedLeaves = [];
   for (let i = 0; i < correctedTreeSize; i++) {
     if (i < leaves.length) {
-      parsedLeaves.push(leaves[i])
+      parsedLeaves.push(leaves[i]);
     } else {
-      parsedLeaves.push(ethers.keccak256('0x' + '00'.repeat(32)))
+      parsedLeaves.push(ethers.keccak256("0x" + "00".repeat(32)));
     }
   }
 
   // merkletreejs prefers things to be Buffers.
-  const bufLeaves = parsedLeaves.map(fromHexString)
+  const bufLeaves = parsedLeaves.map(fromHexString);
   const tree = new MerkleTree(bufLeaves, (el: Buffer | string): Buffer => {
-    return fromHexString(ethers.keccak256(el))
-  })
+    return fromHexString(ethers.keccak256(el));
+  });
 
   const proof = tree.getProof(bufLeaves[index], index).map((element: any) => {
-    return toHexString(element.data)
-  })
+    return toHexString(element.data);
+  });
 
-  return proof
-}
+  return proof;
+};
 
 /**
  * Generates a Merkle-Patricia trie proof for a given account and storage slot.
@@ -313,17 +317,17 @@ const getStateTrieProof = async (
   address: string,
   slot: string
 ): Promise<StateTrieProof> => {
-  const proof = await l2RpcProvider.send('eth_getProof', [
+  const proof = await l2RpcProvider.send("eth_getProof", [
     address,
     [slot],
     toRpcHexString(blockNumber),
-  ])
+  ]);
 
   return {
     accountProof: toHexString(rlp.encode(proof.accountProof)),
     storageProof: toHexString(rlp.encode(proof.storageProof[0].proof)),
-  }
-}
+  };
+};
 
 /**
  * Finds all L2 => L1 messages sent in a given L2 transaction and generates proofs for each of
@@ -345,16 +349,16 @@ export const getMessagesAndProofsForL2Transaction = async (
   OVM_L2ToL1MessagePasser: string,
   chainId: number
 ): Promise<CrossDomainMessagePair[]> => {
-  if (typeof l1RpcProvider === 'string') {
-    l1RpcProvider = new JsonRpcProvider(l1RpcProvider)
+  if (typeof l1RpcProvider === "string") {
+    l1RpcProvider = new JsonRpcProvider(l1RpcProvider);
   }
-  if (typeof l2RpcProvider === 'string') {
-    l2RpcProvider = new JsonRpcProvider(l2RpcProvider)
+  if (typeof l2RpcProvider === "string") {
+    l2RpcProvider = new JsonRpcProvider(l2RpcProvider);
   }
 
-  const l2Transaction = await l2RpcProvider.getTransaction(l2TransactionHash)
+  const l2Transaction = await l2RpcProvider.getTransaction(l2TransactionHash);
   if (l2Transaction === null) {
-    throw new Error(`unable to find tx with hash: ${l2TransactionHash}`)
+    throw new Error(`unable to find tx with hash: ${l2TransactionHash}`);
   }
 
   // Need to find the state batch for the given transaction. If no state batch has been published
@@ -364,30 +368,30 @@ export const getMessagesAndProofsForL2Transaction = async (
     l1StateCommitmentChainAddress,
     l2Transaction.blockNumber! - NUM_L2_GENESIS_BLOCKS,
     chainId
-  )
+  );
   if (batch === null) {
     throw new Error(
       `unable to find state root batch for tx with hash: ${l2TransactionHash}`
-    )
+    );
   }
 
   // Adjust the transaction index based on the number of L2 genesis block we have. "Index" here
   // refers to the position of the transaction within the *Canonical Transaction Chain*.
-  const l2TransactionIndex = l2Transaction.blockNumber! - NUM_L2_GENESIS_BLOCKS
+  const l2TransactionIndex = l2Transaction.blockNumber! - NUM_L2_GENESIS_BLOCKS;
 
   // Here the index refers to the position of the state root that corresponds to this transaction
   // within the batch of state roots in which that state root was published.
   const txIndexInBatch =
-    l2TransactionIndex - Number(batch.header.prevTotalElements)
+    l2TransactionIndex - Number(batch.header.prevTotalElements);
 
   // Find every message that was sent during this transaction. We'll then attach a proof for each.
   const messages = await getMessagesByTransactionHash(
     l2RpcProvider,
     l2CrossDomainMessengerAddress,
     l2TransactionHash
-  )
+  );
 
-  const messagePairs: CrossDomainMessagePair[] = []
+  const messagePairs: CrossDomainMessagePair[] = [];
   for (const message of messages) {
     // We need to calculate the specific storage slot that demonstrates that this message was
     // actually included in the L2 chain. The following calculation is based on the fact that
@@ -399,8 +403,8 @@ export const getMessagesAndProofsForL2Transaction = async (
       ethers.keccak256(
         encodeCrossDomainMessage(message) +
           remove0x(l2CrossDomainMessengerAddress)
-      ) + '00'.repeat(32)
-    )
+      ) + "00".repeat(32)
+    );
 
     // We need a Merkle trie proof for the given storage slot. This allows us to prove to L1 that
     // the message was actually sent on L2.
@@ -409,7 +413,7 @@ export const getMessagesAndProofsForL2Transaction = async (
       l2Transaction.blockNumber!,
       OVM_L2ToL1MessagePasser,
       messageSlot
-    )
+    );
 
     // State roots are published in batches to L1 and correspond 1:1 to transactions. We compute a
     // Merkle root for these state roots so that we only need to store the minimum amount of
@@ -418,7 +422,7 @@ export const getMessagesAndProofsForL2Transaction = async (
     const stateRootMerkleProof = getMerkleTreeProof(
       batch.stateRoots,
       txIndexInBatch
-    )
+    );
 
     // We now have enough information to create the message proof.
     const proof: CrossDomainMessageProof = {
@@ -430,13 +434,13 @@ export const getMessagesAndProofsForL2Transaction = async (
       },
       stateTrieWitness: stateTrieProof.accountProof,
       storageTrieWitness: stateTrieProof.storageProof,
-    }
+    };
 
     messagePairs.push({
       message,
       proof,
-    })
+    });
   }
 
-  return messagePairs
-}
+  return messagePairs;
+};
