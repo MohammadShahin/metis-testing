@@ -46,14 +46,14 @@ const networkContracts = {
     // Proxy__MVM_CanonicalTransaction:
     //   "0x6281F34652359cfBa1781D84DAb939f99aaa0e29",
     // Proxy__MVM_ChainManager: "0xEf3375Fc36007a585Ee6e73BF95797273f4F9b49",
-    // Proxy__MVM_StateCommitmentChain:
-    //   "0x9DCC53737FcB3E86a17CF435ca3c15390D4FC7Ed",
+    Proxy__MVM_StateCommitmentChain:
+      "0x9DCC53737FcB3E86a17CF435ca3c15390D4FC7Ed",
     // Proxy__MVM_Verifier: "0x1B9B31E637278c207991F6e96074928728359A10",
     // Proxy__OVM_L1CrossDomainMessenger:
     //   "0x4542c621eEe9fC533c2e6bd80880C89990EE10cD",
     // Proxy__OVM_L1StandardBridge: "0x9848dE505e6Aa301cEecfCf23A0a150140fc996e",
 
-    StateCommitmentChain: "0xA059B3307f534943Ee6c710D9582B42543847Eb1",
+    // StateCommitmentChain: "0xA059B3307f534943Ee6c710D9582B42543847Eb1",
     L1CrossDomainMessenger: "0x4542c621eEe9fC533c2e6bd80880C89990EE10cD",
     CanonicalTransactionChain: "0x5435d351e0aCc874579eC67Ba46440ee6AC892b8",
     AddressManager: "0xa66Fa1eD0f1C1ee300893B4eb5493FeAD9a7e9c3",
@@ -72,7 +72,8 @@ const networkContracts = {
 
   // todo add the contract addresses for the mainnet
   mainnet: {
-    StateCommitmentChain: "",
+    Proxy__MVM_StateCommitmentChain:
+      "0x9DCC53737FcB3E86a17CF435ca3c15390D4FC7Ed",
     L1CrossDomainMessenger: "",
     CanonicalTransactionChain: "",
     AddressManager: "",
@@ -89,7 +90,8 @@ const networkContracts = {
 };
 
 
-type ValidCustomContracts = keyof typeof customContracts;
+export type ValidCustomContracts = keyof typeof customContracts;
+export type ValidNetworkContracts = keyof typeof networkContracts[ChainName];
 
 const getCustomContractAddress = (contractName: ValidCustomContracts) => {
   return customContracts[contractName];

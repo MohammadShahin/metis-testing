@@ -1,5 +1,6 @@
 import {
   ERC20__factory,
+  L1CrossDomainMessenger__factory,
   L1StandardBridge__factory,
   L2StandardBridge__factory,
   Lib_AddressManager__factory,
@@ -28,7 +29,7 @@ const contractFactories = {
       contractName: "l1StandardBridge",
     },
     {
-      addressName: "StateCommitmentChain",
+      addressName: "Proxy__MVM_StateCommitmentChain",
       factory: StateCommitmentChain__factory,
       contractName: "stateCommitmentChain",
     },
@@ -36,6 +37,11 @@ const contractFactories = {
       addressName: "AddressManager",
       factory: Lib_AddressManager__factory,
       contractName: "addressManager",
+    },
+    {
+      addressName: "L1CrossDomainMessenger",
+      factory: L1CrossDomainMessenger__factory,
+      contractName: "l1CrossDomainMessenger",
     },
   ],
   L2: [
@@ -74,16 +80,16 @@ type Contracts = {
 
 const getNetworkContracts = (
   chainName: ChainName,
-  l1Singer?: BaseWallet,
-  l2Singer?: BaseWallet
+  l1Signer?: BaseWallet,
+  l2Signer?: BaseWallet
 ) => {
   const networkAddresses = getNetworkContractAddresses(chainName);
   const contracts = {} as Contracts;
   for (const { addressName, contractName, factory } of contractFactories.L1) {
     // @ts-ignore
     contracts[contractName] = factory.connect(
-      networkAddresses[addressName as keyof typeof networkAddresses],
-      l1Singer
+      networkAddresses[addressName],
+      l1Signer
     );
   }
 
@@ -91,7 +97,7 @@ const getNetworkContracts = (
     // @ts-ignore
     contracts[contractName] = factory.connect(
       networkAddresses[addressName as keyof typeof networkAddresses],
-      l2Singer
+      l2Signer
     );
   }
 

@@ -81,9 +81,8 @@ export const getMessagesByTransactionHash = async (
     throw new Error(`unable to find tx with hash: ${l2TransactionHash}`);
   }
 
-  const l2CrossDomainMessenger = new ethers.Contract(
+  const l2CrossDomainMessenger = L2CrossDomainMessenger__factory.connect(
     l2CrossDomainMessengerAddress,
-    L2CrossDomainMessenger__factory.abi,
     l2RpcProvider
   );
 
@@ -106,7 +105,7 @@ export const getMessagesByTransactionHash = async (
       target: sentMessageEvent.args.target,
       sender: sentMessageEvent.args.sender,
       message: sentMessageEvent.args.message, // decoded message
-      messageNonce: sentMessageEvent.args.messageNonce.toNumber(),
+      messageNonce: Number(sentMessageEvent.args.messageNonce),
     };
   });
 
@@ -139,37 +138,43 @@ export const getStateBatchAppendedEventByTransactionIndex = async (
   l1StateCommitmentChainAddress: string,
   l2TransactionIndex: number,
   chainId: number
-): Promise<ethers.EventLog | null> => {
-  const l1StateCommitmentChain = new ethers.Contract(
+) => {
+  // const l1StateCommitmentChain = new ethers.Contract(
+  //   l1StateCommitmentChainAddress,
+  //   StateCommitmentChain__factory.abi,
+  //   l1RpcProvider
+  // );
+  const l1StateCommitmentChain = StateCommitmentChain__factory.connect(
     l1StateCommitmentChainAddress,
-    StateCommitmentChain__factory.abi,
     l1RpcProvider
   );
 
-  const getStateBatchAppendedEventByBatchIndex = async (
-    index: number
-  ): Promise<ethers.EventLog | null> => {
+  const getStateBatchAppendedEventByBatchIndex = async (index: number) => {
     const eventQueryResult = await l1StateCommitmentChain.queryFilter(
-      l1StateCommitmentChain.filters.StateBatchAppended(index)
+      l1StateCommitmentChain.filters.StateBatchAppended(undefined, index)
     );
     if (eventQueryResult.length === 0) {
       return null;
     } else {
-      if ("args" in eventQueryResult[0] === false) {
-        throw new Error("eventQueryResult[0].args does not exist");
-      }
       return eventQueryResult[0];
     }
   };
 
   const isEventHi = (event: ethers.EventLog, index: number) => {
-    const prevTotalElements = event.args._prevTotalElements.toNumber();
+    const prevTotalElements = event.args._prevTotalElements;
+    // console.log("prevTotalElements: ", prevTotalElements);
     return index < prevTotalElements;
   };
 
   const isEventLo = (event: ethers.EventLog, index: number) => {
     const prevTotalElements = event.args._prevTotalElements;
     const batchSize = event.args._batchSize;
+    // console.log(
+    //   "batch size",
+    //   batchSize,
+    //   "prevTotalElements: ",
+    //   prevTotalElements
+    // );
     return index >= prevTotalElements + batchSize;
   };
 
@@ -178,14 +183,17 @@ export const getStateBatchAppendedEventByTransactionIndex = async (
   if (totalBatches == 0n) {
     return null;
   }
-
+  console.log("totalBatches: ", totalBatches);
+  console.log("l2TransactionIndex: ", l2TransactionIndex);
   let lowerBound = 0;
   let upperBound = Number(totalBatches) - 1;
-  let batchEvent: ethers.EventLog | null =
-    await getStateBatchAppendedEventByBatchIndex(upperBound);
+  console.log("upperBound: ", upperBound);
+  let batchEvent = await getStateBatchAppendedEventByBatchIndex(upperBound);
   if (!batchEvent) {
     return null;
   }
+
+  console.log("batchEvent", batchEvent);
 
   if (isEventLo(batchEvent, l2TransactionIndex)) {
     // Upper bound is too low, means this transaction doesn't have a corresponding state batch yet.
@@ -230,9 +238,14 @@ export const getStateRootBatchByTransactionIndex = async (
   l2TransactionIndex: number,
   chainId: number
 ): Promise<StateRootBatch | null> => {
-  const l1StateCommitmentChain = new ethers.Contract(
+  // const l1StateCommitmentChain = new ethers.Contract(
+  //   l1StateCommitmentChainAddress,
+  //   StateCommitmentChain__factory.abi,
+  //   l1RpcProvider
+  // );
+
+  const l1StateCommitmentChain = StateCommitmentChain__factory.connect(
     l1StateCommitmentChainAddress,
-    StateCommitmentChain__factory.abi,
     l1RpcProvider
   );
 
@@ -243,13 +256,14 @@ export const getStateRootBatchByTransactionIndex = async (
       l2TransactionIndex,
       chainId
     );
+  console.log("stateBatchAppendedEvent", stateBatchAppendedEvent);
   if (stateBatchAppendedEvent === null) {
     return null;
   }
 
   const stateBatchTransaction = await stateBatchAppendedEvent.getTransaction();
   const [stateRoots] = l1StateCommitmentChain.interface.decodeFunctionData(
-    "appendStateBatch",
+    "appendStateBatchByChainId",
     stateBatchTransaction.data
   );
 

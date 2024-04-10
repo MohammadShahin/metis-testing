@@ -35,6 +35,8 @@ npm run test
 - Withdraw: Ensure withdrawals from L2 to L1 are executed and settled correctly (to be added).
 - Multiple Withdrawal Transactions: Test the inclusion of multiple withdrawal transactions within a single block (to be added).
 
+The withdrawal require the RPC url to be archive node. Archive nodes aren't for public use on Metis Sepolia at the moment. So the withdrawal flow can't be tested now.
+
 You can run the tests in this category with: 
 
 ```
