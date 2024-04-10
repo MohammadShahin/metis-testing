@@ -1,7 +1,8 @@
 import hre from "hardhat";
-import { JsonRpcProvider, Wallet } from "ethers";
+import { FetchRequest, JsonRpcProvider, Wallet } from "ethers";
 import { getSignersPrivateKeys, getNetworkName as getNetworkNameEnv } from "./env";
 import { ChainName, Protocol } from "./types";
+import { HttpNetworkConfig } from "hardhat/types";
 
 const networksInfo = {
   eth: {
@@ -28,13 +29,20 @@ const networksInfo = {
 
 const getNetwork = (networkName?: string) => {
   if (!networkName) networkName = getNetworkNameEnv() ?? "mts_sepolia";
-  return hre.config.networks[networkName];
+  const network = hre.config.networks[networkName];
+  if (!network) {
+    throw new Error(`No network found with name ${networkName}`);
+  }
+  return network as HttpNetworkConfig;
 };
 
 const getProvider = (networkName?: string) => {
   const network = getNetwork(networkName);
-  // @ts-ignore
-  return new JsonRpcProvider(network.url);
+  const fetchReq = new FetchRequest(network.url)
+  for (const [key, value] of Object.entries(network.httpHeaders ?? {})) {
+    fetchReq.setHeader(key, value);
+  }
+  return new JsonRpcProvider(fetchReq);
 };
 
 const getSigners = (networkName?: string) => {

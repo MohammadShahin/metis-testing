@@ -15,7 +15,9 @@ Then copy and fill the env files:
 cp .env.example .env
 ```
 
-Add private keys separated with a comma. Add at least two private keys, they can be the same. Add providers for Metis Sepolia and Ethereum Sepolia. 
+Add private keys `PRIVATE_KEYS` separated with a comma. Add at least two private keys, they can NOT be the same. Add providers for Metis Sepolia and Ethereum Sepolia. Both accounts should have Ether and Metis on L1 (Ethereum Sepolia) and on L2 (Metis Sepolia).
+
+Optional env vars for RPC header authentication are provided: `MTS_SEPOLIA_RPC_URL_HEADERS`, `ETH_SEPOLIA_RPC_URL_HEADERS`.
 
 Compile the smart contracts with the following:
 ```

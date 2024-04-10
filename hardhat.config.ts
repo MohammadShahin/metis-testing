@@ -8,6 +8,7 @@ import "solidity-coverage";
 import "tsconfig-paths/register";
 
 import * as dotenv from "dotenv";
+import { getEnvByName, getNetworkHeaders } from "@/utils/env";
 
 dotenv.config();
 
@@ -28,10 +29,12 @@ const config: HardhatUserConfig = {
   },
   networks: {
     eth_sepolia: {
-      url: process.env['ETH_SEPOLIA_RPC_URL'],
+      url: getEnvByName('ETH_SEPOLIA_RPC_URL'),
+      httpHeaders: getNetworkHeaders('ETH_SEPOLIA_RPC_URL_HEADERS'),
     },
     mts_sepolia: {
-      url: process.env['MTS_SEPOLIA_RPC_URL'],
+      url: getEnvByName('MTS_SEPOLIA_RPC_URL'),
+      httpHeaders: getNetworkHeaders('MTS_SEPOLIA_RPC_URL_HEADERS'),
     },
   },
 

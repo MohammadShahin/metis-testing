@@ -11,5 +11,12 @@ const getNetworkName = () => {
     return getEnvByName('NETWORK_NAME');
 }
 
+const getNetworkHeaders = (headersEnvName: string): Record<string, string> => {
+    const headers = getEnvByName(headersEnvName);
+    if (!headers) {
+        return {};
+    }
+    return JSON.parse(headers);
+}
 
-export { getEnvByName, getSignersPrivateKeys, getNetworkName }
+export { getEnvByName, getSignersPrivateKeys, getNetworkName, getNetworkHeaders }
